@@ -27,7 +27,7 @@
   .result { margin-top:24px; border:1px solid #bdbdbd; padding:25px 18px; background:#e7e7e7; text-align:center; }
   .result[hidden], #finder[hidden] { display:none; }
   .result { margin-top:0; }
-  .result-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:24px; }
+  .result-actions { display:grid; grid-template-columns:1fr; gap:10px; margin-top:24px; }
   .result-actions button { font-size:16px; padding:12px 8px; }
   #reset { margin-top:10px; background:#f2f2f2; color:#303030; border-color:#aaa; font-size:15px; }
   #reset:hover { background:#ddd; }
@@ -66,7 +66,7 @@
       <div class="eyebrow">DEIN SPRUCH</div>
       <div class="spruch" id="spruch"></div>
       <div class="translation" id="translation"></div>
-      <div class="result-actions"><button type="button" id="read-aloud">Vorlesen</button><button type="button" id="another">Neuer Spruch</button></div>
+      <div class="result-actions"><button type="button" id="another">Neuer Spruch</button></div>
     </section>
   </div>
 </main>
@@ -379,18 +379,11 @@ const form = document.getElementById('finder');
 const result = document.getElementById('result');
 const spruch = document.getElementById('spruch');
 const translation = document.getElementById('translation');
-const readButton = document.getElementById('read-aloud');
 let lastSpruch = '';
 let selectedMood = '';
 let selectedPlace = '';
 
-function stopSpeaking() {
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-  readButton.textContent = 'Vorlesen';
-}
-
 function showSpruch() {
-  stopSpeaking();
   const passende = SPRUECHE.filter(x => x.stimmung === selectedMood && x.situation === selectedPlace);
   const auswahl = passende.filter(x => x.spruch !== lastSpruch);
   const pool = auswahl.length ? auswahl : passende;
@@ -410,29 +403,10 @@ form.addEventListener('submit', event => {
   showSpruch();
 });
 document.getElementById('another').addEventListener('click', () => {
-  stopSpeaking();
   result.hidden = true;
   form.hidden = false;
 });
 
-if (!('speechSynthesis' in window)) {
-  readButton.disabled = true;
-  readButton.textContent = 'Vorlesen nicht verfügbar';
-}
-readButton.addEventListener('click', () => {
-  if (!('speechSynthesis' in window)) return;
-  if (window.speechSynthesis.speaking) {
-    stopSpeaking();
-    return;
-  }
-  const utterance = new SpeechSynthesisUtterance(spruch.textContent);
-  utterance.lang = 'de-DE'; // Browserstimmen beherrschen Plattdeutsch meist nicht.
-  utterance.rate = 0.85;
-  utterance.onend = () => { readButton.textContent = 'Vorlesen'; };
-  utterance.onerror = () => { readButton.textContent = 'Vorlesen'; };
-  readButton.textContent = 'Stopp';
-  window.speechSynthesis.speak(utterance);
-});
 </script>
 </body>
 </html>
