@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wat'n Snack!</title>
+<title>Wat'n Snack! – Museum im Marstall</title>
 <style>
   :root { font-family:Arial,Helvetica,sans-serif; color:#303030; background:#fff; }
   * { box-sizing:border-box; }
   body { margin:0; padding:24px 16px 48px; }
   main { max-width:690px; margin:auto; }
   header { text-align:center; margin:0 0 28px; }
-  .logo { display:block; width:260px; max-width:78%; height:auto; margin:0 auto 22px; }
+  .logo { display:block; width:100px; max-width:78%; height:auto; margin:0 auto 22px; }
   h1 { font-size:clamp(32px,6vw,48px); font-weight:500; margin:0 0 12px; }
   .intro { font-size:17px; line-height:1.6; margin:0 auto; max-width:650px; }
   .finder { background:#fafafa; border:1px solid #bdbdbd; padding:24px; }
@@ -25,7 +25,12 @@
   button { width:100%; border:1px solid #454545; border-radius:0; background:#555; color:white; font-size:20px; font-weight:bold; padding:15px; cursor:pointer; }
   button:hover { background:#333; }
   .result { margin-top:24px; border:1px solid #bdbdbd; padding:25px 18px; background:#e7e7e7; text-align:center; }
-  .result[hidden] { display:none; }
+  .result[hidden], #finder[hidden] { display:none; }
+  .result { margin-top:0; }
+  .result-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:24px; }
+  .result-actions button { font-size:16px; padding:12px 8px; }
+  #reset { margin-top:10px; background:#f2f2f2; color:#303030; border-color:#aaa; font-size:15px; }
+  #reset:hover { background:#ddd; }
   .eyebrow { font-size:13px; color:#666; margin-bottom:12px; }
   .spruch { font-size:clamp(23px,5vw,29px); font-weight:bold; line-height:1.35; margin-bottom:12px; overflow-wrap:anywhere; }
   .translation { font-size:17px; line-height:1.5; }
@@ -35,7 +40,7 @@
 <body>
 <main>
   <header>
-<img src="museum-logo.jpg" alt="Museum im Marstall" style="width:100px; height:auto;">    
+    <img class="logo" src="museum-logo.png" alt="Museum im Marstall">
     <h1>Wat'n Snack!</h1>
     <p class="intro">Genervt, müde oder gut drauf? Für fast jede Stimmung und Situation gibt es auch auf Plattdeutsch einen passenden Spruch. Einfach Stimmung und Situation auswählen und schauen, was dabei herauskommt.</p>
   </header>
@@ -61,6 +66,7 @@
       <div class="eyebrow">DEIN SPRUCH</div>
       <div class="spruch" id="spruch"></div>
       <div class="translation" id="translation"></div>
+      <div class="result-actions"><button type="button" id="read-aloud">Vorlesen</button><button type="button" id="another">Neuer Spruch</button></div>
     </section>
   </div>
 </main>
@@ -371,19 +377,61 @@ const SPRUECHE = [
 
 const form = document.getElementById('finder');
 const result = document.getElementById('result');
+const spruch = document.getElementById('spruch');
+const translation = document.getElementById('translation');
+const readButton = document.getElementById('read-aloud');
 let lastSpruch = '';
-form.addEventListener('submit', function(event) {
-  event.preventDefault();
-  const mood = form.elements.mood.value;
-  const place = form.elements.place.value;
-  const passende = SPRUECHE.filter(x => x.stimmung === mood && x.situation === place);
-  const auswahl = passende.filter(x => passende.length === 1 || x.spruch !== lastSpruch);
-  if (!auswahl.length) return;
-  const chosen = auswahl[Math.floor(Math.random() * auswahl.length)];
+let selectedMood = '';
+let selectedPlace = '';
+
+function stopSpeaking() {
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  readButton.textContent = 'Vorlesen';
+}
+
+function showSpruch() {
+  stopSpeaking();
+  const passende = SPRUECHE.filter(x => x.stimmung === selectedMood && x.situation === selectedPlace);
+  const auswahl = passende.filter(x => x.spruch !== lastSpruch);
+  const pool = auswahl.length ? auswahl : passende;
+  if (!pool.length) return;
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
   lastSpruch = chosen.spruch;
-  document.getElementById('spruch').textContent = chosen.spruch;
-  document.getElementById('translation').textContent = chosen.uebersetzung;
+  spruch.textContent = chosen.spruch;
+  translation.textContent = chosen.uebersetzung;
+  form.hidden = true;
   result.hidden = false;
+}
+
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  selectedMood = form.elements.mood.value;
+  selectedPlace = form.elements.place.value;
+  showSpruch();
+});
+document.getElementById('another').addEventListener('click', () => {
+  stopSpeaking();
+  result.hidden = true;
+  form.hidden = false;
+});
+
+if (!('speechSynthesis' in window)) {
+  readButton.disabled = true;
+  readButton.textContent = 'Vorlesen nicht verfügbar';
+}
+readButton.addEventListener('click', () => {
+  if (!('speechSynthesis' in window)) return;
+  if (window.speechSynthesis.speaking) {
+    stopSpeaking();
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(spruch.textContent);
+  utterance.lang = 'de-DE'; // Browserstimmen beherrschen Plattdeutsch meist nicht.
+  utterance.rate = 0.85;
+  utterance.onend = () => { readButton.textContent = 'Vorlesen'; };
+  utterance.onerror = () => { readButton.textContent = 'Vorlesen'; };
+  readButton.textContent = 'Stopp';
+  window.speechSynthesis.speak(utterance);
 });
 </script>
 </body>
