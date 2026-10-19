@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wat'n Snack! – Museum im Marstall</title>
+<style>
+  :root { font-family:Arial,Helvetica,sans-serif; color:#303030; background:#fff; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px 48px; }
+  main { max-width:690px; margin:auto; }
+  header { text-align:center; margin:0 0 28px; }
+  .logo { display:block; width:260px; max-width:78%; height:auto; margin:0 auto 22px; }
+  h1 { font-size:clamp(32px,6vw,48px); font-weight:500; margin:0 0 12px; }
+  .intro { font-size:17px; line-height:1.6; margin:0 auto; max-width:650px; }
+  .finder { background:#fafafa; border:1px solid #bdbdbd; padding:24px; }
+  fieldset { border:0; padding:0; margin:0 0 26px; min-width:0; }
+  legend { font-size:19px; font-weight:bold; margin-bottom:12px; padding:0; }
+  .options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+  .options label { display:block; position:relative; cursor:pointer; }
+  .options input { position:absolute; opacity:0; width:1px; height:1px; }
+  .options span { display:flex; min-height:58px; align-items:center; justify-content:center; text-align:center; padding:10px 8px; background:#f2f2f2; border:2px solid #bdbdbd; font-size:15px; font-weight:600; }
+  .options input:checked + span { background:#d2d2d2; border-color:#505050; }
+  .options input:focus-visible + span { outline:3px solid #444; outline-offset:3px; }
+  button { width:100%; border:1px solid #454545; border-radius:0; background:#555; color:white; font-size:20px; font-weight:bold; padding:15px; cursor:pointer; }
+  button:hover { background:#333; }
+  .result { margin-top:24px; border:1px solid #bdbdbd; padding:25px 18px; background:#e7e7e7; text-align:center; }
+  .result[hidden] { display:none; }
+  .eyebrow { font-size:13px; color:#666; margin-bottom:12px; }
+  .spruch { font-size:clamp(23px,5vw,29px); font-weight:bold; line-height:1.35; margin-bottom:12px; overflow-wrap:anywhere; }
+  .translation { font-size:17px; line-height:1.5; }
+  @media(max-width:520px) { .finder { padding:16px; } .options { grid-template-columns:1fr; } .options span { min-height:48px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img class="logo" src="museum-logo.png" alt="Museum im Marstall">
+    <h1>Wat'n Snack!</h1>
+    <p class="intro">Genervt, müde oder gut drauf? Für fast jede Stimmung und Situation gibt es auch auf Plattdeutsch einen passenden Spruch. Einfach Stimmung und Situation auswählen und schauen, was dabei herauskommt.</p>
+  </header>
+  <div class="finder">
+    <form id="finder">
+      <fieldset><legend>Wie bist du drauf?</legend>
+        <div class="options">
+          <label><input type="radio" name="mood" value="Genervt" checked><span>Genervt</span></label>
+          <label><input type="radio" name="mood" value="Müde"><span>Müde</span></label>
+          <label><input type="radio" name="mood" value="Gut drauf"><span>Gut drauf</span></label>
+        </div>
+      </fieldset>
+      <fieldset><legend>Wo bist du gerade?</legend>
+        <div class="options">
+          <label><input type="radio" name="place" value="Bei der Arbeit" checked><span>Bei der Arbeit</span></label>
+          <label><input type="radio" name="place" value="In der Freizeit"><span>In der Freizeit</span></label>
+          <label><input type="radio" name="place" value="Unterwegs"><span>Unterwegs</span></label>
+        </div>
+      </fieldset>
+      <button type="submit">Los!</button>
+    </form>
+    <section id="result" class="result" aria-live="polite" hidden>
+      <div class="eyebrow">DEIN SPRUCH</div>
+      <div class="spruch" id="spruch"></div>
+      <div class="translation" id="translation"></div>
+    </section>
+  </div>
+</main>
+<script>
+// SPRÜCHESAMMLUNG: Hier lassen sich die Einträge bearbeiten und ergänzen.
+const SPRUECHE = [
+  {
+    "spruch": "Sabbel nich, dat geiht!",
+    "uebersetzung": "Red nicht so viel, das funktioniert!",
+    "stimmung": "Genervt",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Nich an fummeln, wenn't löppt!",
+    "uebersetzung": "Nicht daran herumfummeln, wenn es funktioniert!",
+    "stimmung": "Genervt",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Wat mutt, dat mutt.",
+    "uebersetzung": "Was sein muss, muss sein.",
+    "stimmung": "Genervt",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Veel snacken un nix doon.",
+    "uebersetzung": "Viel reden und nichts tun.",
+    "stimmung": "Genervt",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Nu is aver Schicht in'n Schacht!",
+    "uebersetzung": "Jetzt reicht es aber!",
+    "stimmung": "Genervt",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Ik kann nich för allens den Kopp henhollen.",
+    "uebersetzung": "Ich kann nicht für alles den Kopf hinhalten.",
+    "stimmung": "Genervt",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Klei mi an'n Mors!",
+    "uebersetzung": "Du kannst mich mal!",
+    "stimmung": "Genervt",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Nu is aver good!",
+    "uebersetzung": "Jetzt reicht's!",
+    "stimmung": "Genervt",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Laat mi doch endlich in Roh!",
+    "uebersetzung": "Lass mich doch endlich in Ruhe!",
+    "stimmung": "Genervt",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Wat to veel is, is to veel.",
+    "uebersetzung": "Was zu viel ist, ist zu viel.",
+    "stimmung": "Genervt",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Du büst mi een!",
+    "uebersetzung": "Du bist mir vielleicht einer!",
+    "stimmung": "Genervt",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Ik heff de Nääs vull!",
+    "uebersetzung": "Ich habe die Nase voll!",
+    "stimmung": "Genervt",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Wat för'n Schietweer!",
+    "uebersetzung": "Was für ein Mistwetter!",
+    "stimmung": "Genervt",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Kumm endlich in de Puschen!",
+    "uebersetzung": "Beeil dich endlich!",
+    "stimmung": "Genervt",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Dat kann doch nich angahn!",
+    "uebersetzung": "Das kann doch nicht wahr sein!",
+    "stimmung": "Genervt",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Jümmers disse Drängelei!",
+    "uebersetzung": "Immer diese Drängelei!",
+    "stimmung": "Genervt",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Wo schall dat noch henföhren?",
+    "uebersetzung": "Wo soll das noch hinführen?",
+    "stimmung": "Genervt",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Ik harr lever tohuus blieven schullt.",
+    "uebersetzung": "Ich hätte lieber zu Hause bleiben sollen.",
+    "stimmung": "Genervt",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Morgen is ok noch'n Dag.",
+    "uebersetzung": "Morgen ist auch noch ein Tag.",
+    "stimmung": "Müde",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Ik bün platt as'n Flunner.",
+    "uebersetzung": "Ich bin völlig erledigt.",
+    "stimmung": "Müde",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "De Arbeid löppt nich weg.",
+    "uebersetzung": "Die Arbeit läuft nicht weg.",
+    "stimmung": "Müde",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Eerst mal'n Koffie!",
+    "uebersetzung": "Erst mal einen Kaffee!",
+    "stimmung": "Müde",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Ik bün noch nich richtig wakker.",
+    "uebersetzung": "Ich bin noch nicht richtig wach.",
+    "stimmung": "Müde",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Nu is Fieravend!",
+    "uebersetzung": "Jetzt ist Feierabend!",
+    "stimmung": "Müde",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Slapen, freten, supen, langsam gohn un pupen, dat sleit an!",
+    "uebersetzung": "Schlafen, essen, trinken, langsam gehen und pupsen – das tut gut!",
+    "stimmung": "Müde",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Laat mi man liggen.",
+    "uebersetzung": "Lass mich einfach liegen.",
+    "stimmung": "Müde",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Ik maak hüüt gor nix mehr.",
+    "uebersetzung": "Ich mache heute gar nichts mehr.",
+    "stimmung": "Müde",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Mien Sofa röppt na mi.",
+    "uebersetzung": "Mein Sofa ruft nach mir.",
+    "stimmung": "Müde",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Wer nix deit, maakt ok nix verkehrt.",
+    "uebersetzung": "Wer nichts macht, macht auch nichts falsch.",
+    "stimmung": "Müde",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Ik gah nu in de Feddern.",
+    "uebersetzung": "Ich gehe jetzt ins Bett.",
+    "stimmung": "Müde",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Mien Been sünd as Blei.",
+    "uebersetzung": "Meine Beine sind wie Blei.",
+    "stimmung": "Müde",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Is dat noch wied?",
+    "uebersetzung": "Ist es noch weit?",
+    "stimmung": "Müde",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Ik kann keen Schritt mehr doon.",
+    "uebersetzung": "Ich kann keinen Schritt mehr machen.",
+    "stimmung": "Müde",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Wenn wi dor sünd, weck mi!",
+    "uebersetzung": "Wenn wir da sind, weck mich!",
+    "stimmung": "Müde",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Nu will ik bloots noch na Huus.",
+    "uebersetzung": "Jetzt will ich nur noch nach Hause.",
+    "stimmung": "Müde",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Dat löppt!",
+    "uebersetzung": "Das läuft!",
+    "stimmung": "Gut drauf",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Na denn man to!",
+    "uebersetzung": "Na dann mal los!",
+    "stimmung": "Gut drauf",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Geiht nich, gifft nich!",
+    "uebersetzung": "Geht nicht, gibt's nicht!",
+    "stimmung": "Gut drauf",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "So maakt Arbeid Spaaß!",
+    "uebersetzung": "So macht Arbeit Spaß!",
+    "stimmung": "Gut drauf",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Anholn deit kriegen.",
+    "uebersetzung": "Wer dranbleibt, hat Erfolg.",
+    "stimmung": "Gut drauf",
+    "situation": "Bei der Arbeit"
+  },
+  {
+    "spruch": "Nu geiht dat rund!",
+    "uebersetzung": "Jetzt geht's rund!",
+    "stimmung": "Gut drauf",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Een geiht noch!",
+    "uebersetzung": "Einer geht noch!",
+    "stimmung": "Gut drauf",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Laat uns op'n Swutsch gahn!",
+    "uebersetzung": "Lass uns ausgehen!",
+    "stimmung": "Gut drauf",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Dat Leven is schön!",
+    "uebersetzung": "Das Leben ist schön!",
+    "stimmung": "Gut drauf",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Is wedder Tied för'n Klönschnack!",
+    "uebersetzung": "Es ist wieder Zeit für ein Schwätzchen!",
+    "stimmung": "Gut drauf",
+    "situation": "In der Freizeit"
+  },
+  {
+    "spruch": "Immer liekut!",
+    "uebersetzung": "Immer geradeaus!",
+    "stimmung": "Gut drauf",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Nu geiht dat los!",
+    "uebersetzung": "Jetzt geht's los!",
+    "stimmung": "Gut drauf",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Holl de Ohren stiev!",
+    "uebersetzung": "Halt die Ohren steif!",
+    "stimmung": "Gut drauf",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "Annerwegen warrt ok Brood backt.",
+    "uebersetzung": "Anderswo wird auch Brot gebacken.",
+    "stimmung": "Gut drauf",
+    "situation": "Unterwegs"
+  },
+  {
+    "spruch": "De Welt is groot, un wi sünd mittendrin!",
+    "uebersetzung": "Die Welt ist groß, und wir sind mittendrin!",
+    "stimmung": "Gut drauf",
+    "situation": "Unterwegs"
+  }
+];
+
+const form = document.getElementById('finder');
+const result = document.getElementById('result');
+let lastSpruch = '';
+form.addEventListener('submit', function(event) {
+  event.preventDefault();
+  const mood = form.elements.mood.value;
+  const place = form.elements.place.value;
+  const passende = SPRUECHE.filter(x => x.stimmung === mood && x.situation === place);
+  const auswahl = passende.filter(x => passende.length === 1 || x.spruch !== lastSpruch);
+  if (!auswahl.length) return;
+  const chosen = auswahl[Math.floor(Math.random() * auswahl.length)];
+  lastSpruch = chosen.spruch;
+  document.getElementById('spruch').textContent = chosen.spruch;
+  document.getElementById('translation').textContent = chosen.uebersetzung;
+  result.hidden = false;
+});
+</script>
+</body>
+</html>
